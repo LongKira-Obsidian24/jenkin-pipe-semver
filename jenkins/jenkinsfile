@@ -1,0 +1,110 @@
+import java.text.SimpleDateFormat
+
+def majorVer = 0
+def minorVer = 0
+def patchVer = 0
+def devver = null
+boolean isPreRelease = false
+boolean buildNewVerson = false
+def versionMessage="No additional Message"
+
+pipeline{
+    agent any
+    stages{
+        // stage('Checkout Code') {
+        //     steps {
+        //         git branch: 'main', credentialsId: 'kira17-git', url: 'http://192.168.69.11:8081/user/repo'
+        //     }
+        // }
+        stage('Configure Git Identity') {
+            steps {
+                sh 'git config user.name "kira sev entine"'
+                sh 'git config user.email "kirazero17@anywhere.com"'
+            }
+        }
+        stage("Git: Get current and next version"){
+            steps{
+                script{
+                    def tag = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                    if (tag != null)
+                    {
+                        println "$tag"
+                        (majorVer, minorVer, patchVer) = tag.tokenize('v|\\.|-')
+                        majorVer = majorVer as Integer
+                        minorVer = minorVer as Integer
+                        patchVer = patchVer as Integer
+                        println "Major Version: $majorVer"
+                        println "Minor Version: $minorVer"
+                        println "Patch Version: $patchVer"
+                    }
+                }
+            }
+        }
+        stage("Git: Get next Verstion"){
+            steps{
+                script{
+                    def commit = sh(returnStdout: true, script: "git log -1 --format=%s").trim()
+                    def commitType = commit.tokenize(':')[0]
+                    switch(commitType.toLowerCase()){
+                        case "fix":
+                            patchVer++
+                            buildNewVerson = true
+                            break
+                        case "feat":
+                            minorVer++
+                            patchVer = 0
+                            buildNewVerson = true
+                            break
+                        case "breaking change":
+                            majorVer++
+                            minorVer = 0
+                            patchVer = 0
+                            buildNewVerson = true
+                            break
+                        case "pre-release":
+                            buildNewVerson = true
+                            isPreRelease = true
+                            break
+                        default:
+                            println "No version bump."
+                    }
+                    if (buildNewVerson == true) {
+                        if (isPreRelease == true) {
+                            if (devver == null) {
+                                def date = new Date()
+                                def sdf = new SimpleDateFormat("yyyyMMddHHmmss")
+                                devver = sdf.format(date)
+                            }
+                            devver = "-${devver}"
+                        }
+                        else {
+                            devver = null
+                        }
+                    }
+                }
+            }
+        }
+        stage("Git: Tag and push the next Verstion"){
+            steps{
+                withCredentials([gitUsernamePassword(credentialsId: 'kira17-git', gitToolName: 'Default')]){
+                    script {
+                        println "Next version: v${majorVer}.${minorVer}.${patchVer}"
+                            sh """git tag -a v${majorVer}.${minorVer}.${patchVer}${devver} -m \"Release version ${majorVer}.${minorVer}.${patchVer}${devver} - ${versionMessage}\"
+                            git push origin v${majorVer}.${minorVer}.${patchVer}${devver}"""
+                    }
+                }
+            }
+        }
+    }
+    post{
+        always{
+            echo "========Pipeline Execution: stopped========"
+        }
+        success{
+            echo "========Pipeline executed successfully for new build========"
+        }
+        failure{
+            echo "========Pipeline execution failed========"
+        }
+    }
+}
