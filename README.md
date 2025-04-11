@@ -20,7 +20,7 @@ There seems to be no other Jenkins plugin/extension that do the SemVer stuff, an
 
 ## My Versioning scheme
 
-The version string format will be \<major\>.\<minor\>.\<patch\> for releases and \<major\>.\<minor\>.\<patch\>-\<build time\> or \<major\>.\<minor\>.\<patch\>-\<CustomString\> for pre-released.
+The version string format will be `\<major\>.\<minor\>.\<patch\>` for releases and `\<major\>.\<minor\>.\<patch\>-\<build time\>` or `\<major\>.\<minor\>.\<patch\>-\<CustomString\>` for pre-released.
 
 The version numbers will be bumped depending on the type of commit:
 
@@ -33,3 +33,5 @@ The version numbers will be bumped depending on the type of commit:
 - Pre-release: Does not increment the major, minor, nor patch, but will add a hyphen and an extra string (either defined by the developer or the build time will be assigned automatically).
 
 ## Code explanation
+
+My
